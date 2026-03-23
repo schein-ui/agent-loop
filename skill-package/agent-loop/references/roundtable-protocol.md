@@ -21,11 +21,12 @@ Chosen by the orchestrator in Phase 1 based on the problem's domains. Each must 
 
 ### Standing Members (always present)
 
-| Agent | Role |
-|-------|------|
-| **Anthropic Senior Engineer** | Technical feasibility. Ensures the execution plan can be built within Claude Code's architecture. Has veto authority on technical feasibility during convergence. |
+| Agent | Role | Presence |
+|-------|------|----------|
+| **Anthropic Senior Engineer** | Technical feasibility. Ensures the execution plan can be built within Claude Code's architecture. Has veto authority on technical feasibility during convergence. | Always |
+| **Anthropic Coding Senior Engineer** | Implementation quality. Ensures generated code is production-grade with correct imports, error handling, and edge-case resilience. Has veto authority on code quality during convergence. | Conditional — activated when the Casting Director classifies the skill as complex (2+ of: code generation, 5+ tasks with 2+ dependency layers, multi-file cross-referenced output, programmatic consumption, state management/retry/error recovery). |
 
-Standing members do not count toward the 3-6 expert limit. They participate in all three rounds. Their primary role is constraint-checking, not domain expertise. When presenting the team to the user, list standing members separately from selected experts.
+Standing members do not count toward the 3-6 expert limit. They participate in all three rounds. Their primary role is constraint-checking, not domain expertise. When the Coding Senior Engineer is present, they add a code quality bar to any execution plan task that produces code. When presenting the team to the user, list standing members separately from selected experts.
 
 ## Running the Roundtable
 

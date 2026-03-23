@@ -141,14 +141,28 @@ Certain agents are always present at the roundtable, regardless of the problem d
 |-------|---------|------|
 | **Casting Director** | Senior talent partner who's staffed 200+ deal teams and project teams across PE, consulting, and banking. Thinks in team dynamics, not just individual expertise. | Team composition. Runs Step 2 — selects which agents sit at the roundtable based on the problem decomposition. Optimizes for productive tension, coverage of all problem dimensions, and zero redundancy. The Casting Director does not participate in the roundtable debate itself — their job is done once the team is set. |
 | **Anthropic Senior Engineer** | Staff-level engineer on the Claude Code platform team | Technical feasibility. Ensures the execution plan can actually be built within Claude Code's architecture. Flags when proposed approaches exceed tool capabilities, context window limits, or multi-step execution constraints. This is the "can we actually build this?" check. |
+| **Anthropic Coding Senior Engineer** *(conditional)* | Staff-level engineer specializing in skill authoring and code generation quality | Implementation quality. Present only when the skill is classified as **complex** (see activation criteria below). Ensures generated code is production-grade — correct imports, error handling, edge-case resilience, consistent output contracts. This is the "will the code actually work?" check. |
+
+**Complexity classification for Coding Senior Engineer activation:**
+
+The Casting Director evaluates whether the Anthropic Coding Senior Engineer should join the roundtable. The agent is activated when the skill meets **2 or more** of these criteria:
+
+1. The deliverable includes generated code (scripts, functions, configurations, or skill definitions)
+2. The execution plan has 5+ tasks with 2+ dependency layers
+3. The problem requires multi-file output with cross-references
+4. The deliverable will be consumed programmatically (not just read by humans)
+5. The skill involves state management, retry logic, or error recovery
+
+If activated, the Casting Director states: *"This skill is classified as complex — activating the Anthropic Coding Senior Engineer for implementation quality review."* If not activated, the Casting Director states the reason briefly.
 
 **How standing members work:**
 
 - Standing members do not count toward the 3-6 expert agent limit. They are additive.
 - They participate in all rounds of the debate — opening positions, challenge, and convergence.
-- Their primary role is feasibility and constraint-checking, not domain expertise. The Anthropic Senior Engineer is not there to opine on market sizing — they are there to say "that plan requires reading 400 pages of PDFs in a single pass, which will exceed context limits, so here's how to restructure the approach."
-- During convergence, standing members have **veto authority on technical feasibility**. If the engineer says "this won't work within tool constraints," the execution plan must adapt.
-- When presenting the team to the user (Step 3), list standing members separately from selected experts. Make clear they are permanent fixtures, not discretionary picks.
+- Their primary role is feasibility and constraint-checking, not domain expertise. The Anthropic Senior Engineer is not there to opine on market sizing — they are there to say "that plan requires reading 400 pages of PDFs in a single pass, which will exceed context limits, so here's how to restructure the approach." The Anthropic Coding Senior Engineer is not there to discuss strategy — they are there to say "that subagent prompt will produce code with no error handling, so here's how to tighten the output contract."
+- During convergence, standing members have **veto authority on technical feasibility**. If the Senior Engineer says "this won't work within tool constraints," or the Coding Senior Engineer says "this execution plan will produce brittle code," the execution plan must adapt.
+- When the Coding Senior Engineer is present, they add a **code quality bar** column to any task in the execution plan that produces code output. This column specifies: expected language, error handling requirements, and minimum validation checks.
+- When presenting the team to the user (Step 3), list standing members separately from selected experts. Make clear they are permanent fixtures (or conditional fixtures), not discretionary picks.
 
 ### Step 3: Present the Team and Output Template
 
