@@ -1,188 +1,242 @@
 # Roundtable Protocol
 
-## Purpose
+> This file extends SKILL.md Phase 2 (Roundtable) with deeper tactical guidance on facilitating productive debates, recognizing genuine vs. synthetic disagreement, and running quality self-checks. It does not restate the round structure, Disagreement Gate mechanics, execution plan format, or dependency validation — those live in SKILL.md.
 
-The roundtable forces expert agents to debate the best approach to a problem BEFORE any execution begins. This prevents the most common failure mode in AI workflows: jumping straight to a mediocre first-pass answer without questioning the approach.
+---
 
-## Why Debate Matters
+## Standing Members: Conditional Presence
 
-Real experts disagree. A Bain partner and a McKinsey partner would frame the same problem differently — one might lead with profit pools, the other with capability-driven strategy. A COO would challenge both for ignoring execution complexity. An investment banker would ask about exit implications neither consultant considered.
+### Anthropic Senior Engineer
 
-When agents debate, three things happen:
-1. Weak assumptions get exposed before they infect the analysis
-2. The execution plan incorporates the strongest elements from multiple frameworks
-3. Edge cases and risks surface that a single-perspective approach would miss
+**Required when:** The deliverable involves code, tool usage, Claude Code capabilities, technical architecture, API design, data pipelines, or any implementation that runs on infrastructure.
 
-## Participants
+**Optional when:** The problem is pure strategy, creative, analytical, or operational — and no part of the execution plan involves building, configuring, or deploying anything technical.
 
-### Selected Experts (3-6 agents)
+**When excluded, state it explicitly:** "The Anthropic Senior Engineer is not required for this roundtable — the problem is [strategy/creative/analytical] with no technical implementation. If technical feasibility becomes relevant during the debate, I'll add them."
 
-Chosen by the orchestrator in Phase 1 based on the problem's domains. Each must bring a genuinely different lens. If removing an agent wouldn't cost the roundtable a unique perspective, don't include them.
+The engineer's veto authority on technical feasibility still applies when they are present. When absent, the orchestrator takes responsibility for flagging obvious technical infeasibility (e.g., "this plan requires reading 500 pages in a single pass").
 
-### Standing Members (always present)
+---
 
-| Agent | Role |
-|-------|------|
-| **Anthropic Senior Engineer** | Technical feasibility. Ensures the execution plan can be built within Claude Code's architecture. Has veto authority on technical feasibility during convergence. |
+## Facilitating Good Debates
 
-Standing members do not count toward the 3-6 expert limit. They participate in all three rounds. Their primary role is constraint-checking, not domain expertise. When presenting the team to the user, list standing members separately from selected experts.
+The orchestrator's job in Round 2 is not to summarize — it is to create productive collisions between positions. This section provides tactical guidance for doing that well.
 
-## Running the Roundtable
+### The Collision Principle
 
-### Setting the Stage
+A productive debate has at least one moment where resolving a disagreement changes the execution plan. If the debate could be deleted without altering the plan, it was performative.
 
-Before agents speak, the orchestrator frames the problem clearly:
-- What is the user trying to accomplish?
-- What decisions need to be made?
-- What constraints exist (time, budget, information availability)?
-- What does "good" look like for this deliverable?
+The orchestrator should drive toward these collisions by identifying the highest-stakes disagreement and forcing direct engagement:
 
-### Round 1: Opening Positions
+**Pattern: The Direct Challenge**
+- "Agent X, the [Role] just said [specific claim]. You clearly disagree. What specifically is wrong with their reasoning?"
+- Not: "Agent X, what do you think about Agent Y's position?" (too soft — invites summary, not challenge)
 
-Each agent gets a structured opening. They must address:
+**Pattern: The Assumption Probe**
+- "That recommendation assumes [specific assumption]. Agent Z, does that assumption hold in your experience? What happens if it's wrong?"
+- Not: "Are there any risks?" (too vague — invites generic risk lists)
 
-**Diagnosis**: "Here's what I think the real problem/opportunity is..."
-- Not just restating the user's request, but reframing it through their expert lens
-- What does this look like from their domain? What patterns do they recognize?
+**Pattern: The Consequences Fork**
+- "If we go with Agent A's approach, what's the worst realistic outcome? And if we go with Agent B's, what do we lose?"
+- Forces agents to evaluate trade-offs concretely, not abstractly.
 
-**Recommended Approach**: "Here's how I'd tackle this..."
-- Specific methodology or framework they'd apply
-- Why this approach over alternatives
-- What data or inputs they'd need
+**Pattern: The Evidence Demand**
+- "You've both stated your positions. Agent A, name one specific case where your approach worked. Agent B, name one where it failed."
+- Grounds the debate in real-world evidence instead of theoretical preferences.
 
-**Predicted Blindspots**: "Here's what I think the other agents will miss..."
-- What their domain reveals that others might overlook
-- Common mistakes they've seen when their expertise is absent
+### Domain-Specific Debate Examples
 
-**Each opening should be 3-5 sentences, capped at 300 words.** This isn't a monologue — it's a position statement designed to provoke productive disagreement. The orchestrator summarizes any agent that runs long.
+**Product debate (genuinely productive):**
+> *Product Lead:* "We should launch with a minimal feature set — 3 core features — and iterate based on user feedback."
+> *Engineering Lead:* "If we ship without the integration API, enterprise customers can't evaluate us. We'll get consumer feedback but miss the segment that pays."
+> *Design Lead:* "The consumer experience IS the enterprise pitch. A polished 3-feature product sells better than a rough 10-feature one."
+> **The collision:** Does the MVP need the integration API? Resolving this one way produces a 6-week launch; resolving it the other produces a 12-week launch with a different target segment. The execution plan changes.
 
-**Post-Round 1 Redundancy Check**: The orchestrator compares opening positions. If two agents' recommendations converge on the same diagnosis AND the same approach (would produce the same execution plan), either merge their scope and drop one agent, or push the more generic of the two to differentiate: *"Your position overlaps with [Agent X]'s. What do you see that they are missing?"*
+**Creative debate (genuinely productive):**
+> *Brand Strategist:* "The campaign should lead with the product's technical superiority. That's the real differentiator."
+> *Creative Director:* "Technical specs don't move people. Lead with the emotional outcome — what life looks like with this product."
+> *Customer Researcher:* "Our data shows the purchase trigger is social proof, not features or emotions. Lead with adoption numbers and testimonials."
+> **The collision:** Three different campaign architectures. The execution plan assigns entirely different creative assets depending on which thesis wins.
 
-### Round 2: Challenge & Debate
+**Research debate (genuinely productive):**
+> *Domain Expert:* "The literature strongly supports intervention X. The meta-analyses are clear."
+> *Methodologist:* "Those meta-analyses are dominated by two large studies with known design flaws. Strip those out and the effect size drops below clinical significance."
+> *Practitioner:* "Effect size aside, practitioners report that X works in combination with Y but not alone. The studies don't test the combination."
+> **The collision:** Does the research synthesis recommend X, recommend X+Y, or flag X as insufficiently supported? Each leads to a different recommendation section.
 
-The orchestrator drives the debate by:
+**Operational debate (genuinely productive):**
+> *Operations Lead:* "We should migrate all systems simultaneously over a long weekend. Clean cut, minimal parallel-running costs."
+> *Risk Manager:* "Big-bang migrations have a 40% failure rate in comparable environments. Phase it over 8 weeks."
+> *Finance Lead:* "Eight weeks of parallel running costs $200K. The big-bang risk is cheaper than the certain cost of phasing."
+> **The collision:** The migration plan is fundamentally different — 3 days vs. 8 weeks, $0 parallel cost vs. $200K, high operational risk vs. high financial cost. The execution plan can't be both.
 
-1. **Identifying the biggest disagreement** — Where do two agents fundamentally disagree on diagnosis or approach?
-2. **Forcing direct response** — "Agent X, the Strategy Consultant just said Y. You clearly disagree. What's wrong with their framing?"
-3. **Probing assumptions** — "That recommendation assumes Z. Agent W, does that assumption hold in your experience?"
-4. **Escalating** — If agents are being too polite, push harder. "The Contrarian thinks this whole approach has a 40% chance of failure. Strategy Consultant, defend your position."
+### Avoiding Performative Debate
 
-Good debate questions:
-- "What would have to be true for your approach to work?"
-- "When have you seen this approach fail?"
-- "What's the base rate of success for strategies like this?"
-- "If you're wrong about [key assumption], what happens?"
-- "The Operator says this can't be executed in 6 months. What's your response?"
+Not every debate produces insight. The orchestrator should recognize and short-circuit these anti-patterns:
 
-### Disagreement Gate (mandatory after Round 2)
+**Anti-pattern: The Polite Rephrase**
+Agent B "disagrees" with Agent A by saying the same thing in different words. Test: if you resolve the "disagreement" either way, does the execution plan change? If not, it's not a disagreement.
 
-Before proceeding to Round 3, the orchestrator verifies that substantive disagreement occurred.
+**Anti-pattern: The Scope Inflation**
+An agent introduces a new dimension ("we should also consider X") rather than challenging an existing position. New dimensions belong in Round 1. Round 2 is for testing the positions already stated.
 
-**What counts as a substantive disagreement:** Agents disagree on at least one of:
-- **Diagnosis** — They define the core problem differently
-- **Approach** — They recommend materially different execution strategies
-- **Key assumptions** — One agent's plan depends on an assumption another agent explicitly rejects
+**Anti-pattern: The Hedge Stack**
+Instead of taking a position, an agent lists caveats: "it depends on market conditions, regulatory environment, competitive response..." This is risk-listing, not debating. Push: "Given your best estimate of those conditions, which approach do you endorse?"
 
-**What does NOT count:** Differences in emphasis, wording, ordering, or level of detail. If Agent A says "focus on cost synergies first" and Agent B says "revenue synergies should come first," that is a disagreement on sequencing. If Agent A gives a specific number and Agent B says "synergies are real" without specifics, that is not a disagreement — it is one agent being lazy.
+**Anti-pattern: The Authority Appeal**
+"In my experience, this approach works." Without specifying the conditions, the context, or the evidence, experience is not an argument. Push: "In what specific situation did it work, and how similar is that situation to this one?"
 
-**Gate evaluation:**
+---
 
-- **PASSES** if at least one substantive disagreement exists that would change the execution plan (resolving it one way vs. the other leads to different tasks, deliverables, or sequencing). Proceed to Round 3.
-- **FAILS** if zero substantive disagreements exist. The orchestrator MUST take one of these actions:
+## Genuine vs. Synthetic Disagreement
 
-  **Option A — Agent Swap.** Replace the agent whose perspective is most redundant with another agent whose viewpoint is structurally opposed to the emerging consensus. State: *"Round 2 produced no substantive disagreements. Swapping [Agent X] for [Agent Y]. Re-running Round 2."*
+The Disagreement Gate (defined in SKILL.md) requires substantive disagreement before proceeding. But not all disagreement is created equal. The orchestrator must distinguish between:
 
-  **Option B — Inject the Contrarian.** If not already present, add the Contrarian with explicit instruction: *"The prior round produced unanimous agreement. Your job is to find the assumption everyone is making that is most likely wrong, and build a case for an alternative approach."* Re-run Round 2.
+### Genuine Disagreement
 
-  **Option C — Simplicity Acknowledgment.** If the orchestrator genuinely believes the problem is straightforward: *"Round 2 produced no substantive disagreements. This may indicate the problem is straightforward. Proceeding to convergence. If you believe this problem has more complexity than the agents are surfacing, say so and I will restructure the team."*
+Agents disagree because the problem has real tension — competing objectives, uncertain data, legitimate trade-offs. Indicators:
 
-**Re-run limit:** The disagreement gate re-run happens at most once. If Round 2 still produces no disagreement after an agent swap or Contrarian injection, proceed with Option C and log the unanimous consensus.
+- **Different diagnoses from different data.** Agents interpret the same evidence differently because their frameworks prioritize different signals.
+- **Incompatible recommendations.** Doing what Agent A recommends makes Agent B's recommendation impossible or unnecessary.
+- **Structural trade-offs.** Speed vs. thoroughness, cost vs. quality, breadth vs. depth — real constraints that force a choice.
+- **The "both could be right" test.** If smart, informed people could look at the same facts and reach different conclusions, the disagreement is genuine.
 
-**What gets logged in `roundtable.md`:**
+### Synthetic Disagreement
+
+Agents disagree because the Disagreement Gate incentivizes it. Indicators:
+
+- **Manufactured edge cases.** "But what if [extremely unlikely scenario]?" Unlikely scenarios are valid risks, not valid disagreements — they belong in the risk register, not the debate.
+- **Disagreement on framing, not substance.** "I'd call it a 'growth strategy' not a 'market expansion plan'" is not a disagreement. Test: does the label change the execution plan?
+- **The Contrarian stretch.** When the Contrarian's objection starts with "Well, to play devil's advocate..." and the counter-position is obviously weaker than the consensus, the disagreement is performative.
+- **Confidence without stakes.** An agent disagrees but wouldn't change their own deliverable based on the outcome. If the resolution doesn't affect their work, they don't actually care — they're generating content, not arguing a position.
+
+### What to Do When Disagreement Is Synthetic
+
+If the orchestrator detects synthetic disagreement after the gate fails and a retry has been attempted:
+
+1. Use Option C (Simplicity Acknowledgment) without hesitation. Consensus among diverse experts is signal, not failure.
+2. Log it: "Round 2 disagreement assessed as synthetic. Proceeding to convergence on the consensus position."
+3. Do not manufacture additional debate rounds. Synthetic disagreement wastes tokens and degrades the execution plan with unnecessary hedging.
+
+### What to Do When Convergence Is Genuine
+
+Sometimes all agents agree because the answer is clear. This is not a bug. Indicators that convergence is legitimate:
+
+- Agents arrive at the same conclusion through **different reasoning paths** (not just agreeing, but independently deriving the same answer from different frameworks).
+- The problem has a dominant strategy that experts in the field would recognize.
+- The user's constraints are tight enough that there is really only one viable approach.
+
+When convergence is genuine, the roundtable's value shifts from "finding the right approach" to "confirming confidence and surfacing risks." The risk register becomes the primary output of the debate.
+
+---
+
+## Debate Quality Self-Check
+
+**When:** After Round 2, before the Disagreement Gate evaluation.
+
+The orchestrator assesses whether the debate earned its token cost:
+
+### The Three Questions
+
+1. **Did the debate change the execution plan?**
+   - If YES: The debate was productive. Proceed to the Disagreement Gate.
+   - If NO: Ask question 2.
+
+2. **Did the debate surface a risk or assumption that wasn't in anyone's Round 1 position?**
+   - If YES: The debate was productive even without changing the plan. The new insight goes to the risk register.
+   - If NO: Ask question 3.
+
+3. **Did any agent change their position based on another agent's challenge?**
+   - If YES: The debate tested and confirmed the approach. Productive.
+   - If NO: The debate was performative. Log it and proceed to convergence without forcing additional rounds.
+
+### Logging the Self-Check
 
 ```
-## Disagreement Gate
-- Substantive disagreements found: [count]
-- Gate status: PASSED / FAILED — [action taken]
-- If re-run: which agent was swapped/added and why
-- Key disagreements that passed the gate: [list with one line each]
+## Debate Quality Assessment
+- Plan changed by debate: YES / NO — [what changed]
+- New risks or assumptions surfaced: YES / NO — [list]
+- Agent positions shifted: YES / NO — [which agent, what shifted]
+- Assessment: PRODUCTIVE / CONFIRMATORY / PERFORMATIVE
 ```
 
-### Round 3: Convergence
+If the assessment is PERFORMATIVE on two consecutive runs of the same problem type, the orchestrator should note in `agent-loop-state/criteria_log.md`: "This problem type may not benefit from full roundtable debate. Consider Express mode for future similar requests."
 
-After the debate, synthesize:
+---
 
-**Consensus Points** — List what all agents agree on. These are high-confidence elements of the execution plan.
+## Roundtable Facilitation by Problem Type
 
-**Productive Disagreements** — Disagreements that reveal genuine uncertainty or trade-offs. Capture both sides and let the user decide, or design the execution plan to test both hypotheses.
+Different problem types benefit from different facilitation emphasis. The round structure doesn't change, but where the orchestrator pushes hardest does.
 
-**Structured Execution Plan** — The approach that survives the debate, produced as a binding table:
+### Strategy / Planning Problems
+**Push hardest on:** Diagnosis disagreement. Strategy problems have the most room for reframing. If all agents accept the same problem definition, the debate will be shallow.
+**Common trap:** Agents debate tactics without questioning the strategic frame. Force the question: "Are we solving the right problem?"
+
+### Analytical / Research Problems
+**Push hardest on:** Methodology disagreement. The conclusions follow from the method. If agents disagree on conclusions but use the same method, the disagreement is cosmetic. If they disagree on method, the conclusions will genuinely differ.
+**Common trap:** Agents cite different sources but don't evaluate source quality. Force the question: "Which data do you trust more, and why?"
+
+### Creative Problems
+**Push hardest on:** Audience interpretation. Creative disagreements often mask different assumptions about who the audience is and what they value.
+**Common trap:** Subjective preferences disguised as expertise ("I think the tone should be warmer"). Force the question: "What evidence do you have that the audience responds to that tone?"
+
+### Operational / Implementation Problems
+**Push hardest on:** Sequencing and risk. Operations experts rarely disagree on what needs to happen — they disagree on the order, the timeline, and what goes wrong.
+**Common trap:** Over-planning without prioritizing. Force the question: "If we could only get 3 of these 8 things right, which 3?"
+
+### Technical / Architecture Problems
+**Push hardest on:** Trade-offs between approaches. Technical debates can spiral into theoretical comparisons without grounding in the specific constraints.
+**Common trap:** Debating tools instead of outcomes. Force the question: "What does the user experience look like if we go with your approach vs. theirs?"
+
+---
+
+## Post-Roundtable Handoff Quality
+
+The roundtable's output must be rich enough that subagents can execute without losing the reasoning behind the plan. This section supplements SKILL.md's subagent dispatch instructions.
+
+### Task-Specific Briefings
+
+The 1,000-token roundtable summary provides orientation, but each subagent also needs a **task-specific briefing** — the 2-4 paragraphs from the roundtable most relevant to their specific deliverable.
+
+Before dispatching each subagent, the orchestrator reads `roundtable.md` and extracts:
+- The debate points that shaped this task's approach
+- The risks most relevant to this task
+- Any constraints or decisions from convergence that this agent must respect
+- What the other agents' work will contain (so this agent can set up cross-references correctly)
+
+This adds 500-800 tokens per subagent but preserves the reasoning that matters.
+
+### Structuring roundtable.md for Extraction
+
+To make task-specific extraction mechanical rather than interpretive, `roundtable.md` should include a section after the execution plan table:
 
 ```
-| ID | Agent | Deliverable | Inputs | Dependencies | Quality Bar |
-|----|-------|-------------|--------|--------------|-------------|
+## Task-Specific Context
+
+### T1: [Deliverable Name]
+- Key debate context: [what roundtable discussion shaped this task]
+- Relevant risks: [from risk register]
+- Cross-references to expect: [what other tasks will produce that T1 should connect to]
+
+### T2: [Deliverable Name]
+...
 ```
 
-Column definitions:
+This structure allows the orchestrator to extract each task's context by heading, not by interpretation.
 
-| Column | What Goes Here |
-|--------|---------------|
-| **ID** | Short identifier: `T1`, `T2`, `T3`. Sequential. |
-| **Agent** | The specific persona executing this task. Must match a Phase 1 agent. |
-| **Deliverable** | A specific, concrete output. If you can't tell when it's done, rewrite it. |
-| **Inputs** | Source material — uploaded files, web research targets, other agents' deliverables. Be explicit. |
-| **Dependencies** | Either `parallel` or `depends_on: [T1, T3]`. Every task declares its dependency posture. |
-| **Quality Bar** | What separates partner-ready from associate-draft. One sentence, specific enough that two people would grade identically. |
+---
 
-This table is the contract. Phase 3 executes exactly what it specifies. If the plan needs to change, return to the roundtable and amend the table.
+## Express Mode Roundtable Adjustments
 
-**Dependency Graph Validation (mandatory):** After finalizing the table, the orchestrator must:
-1. Check for cycles (hard error).
-2. Check for orphan references (hard error).
-3. Verify at least one task is tagged `parallel` (the graph needs a root node).
+In Express mode, the roundtable runs opening positions only — no challenge round, no multi-round debate.
 
-If any check fails, restructure dependencies within Round 3 before presenting to the user.
+What changes in this file's guidance:
+- The Debate Quality Self-Check is skipped (there is no Round 2).
+- The genuine vs. synthetic disagreement assessment is skipped.
+- The Disagreement Gate is skipped.
+- Stall detection and the grading-to-roundtable escape hatch are inactive (both require multiple passes).
+- Facilitation by problem type still applies to Round 1 — the orchestrator uses these lenses when framing the problem, even without a debate.
+- Task-specific briefings are still extracted from opening positions and convergence.
+- The post-Round 1 redundancy check still runs.
 
-**Risk Register** — Top 3-5 risks surfaced by the roundtable:
-- What could go wrong
-- How likely it is
-- What would mitigate it
-- Who's responsible for monitoring it
-
-## Roundtable Output Presentation
-
-Show the user:
-1. A summary of each agent's opening position (2-3 sentences each)
-2. The key debates and where agents disagreed
-3. The structured execution plan table
-4. The risk register
-5. Ask: "Does this approach make sense? Anything you want to adjust before we execute?"
-
-The full roundtable record is written to `agent-loop-state/roundtable.md`. The in-context summary should be under 1,000 tokens. Wait for user confirmation before proceeding to execution.
-
-## Roundtable Quality Checks
-
-A good roundtable produces:
-- At least one genuine disagreement that changes the execution plan
-- Each agent contributes a perspective the others couldn't have provided
-- The execution plan is more nuanced than any single agent would have produced
-- Risks are concrete and specific, not generic
-- The Anthropic Senior Engineer has confirmed the plan is technically feasible
-
-A bad roundtable looks like:
-- All agents basically agree (you picked agents that are too similar)
-- The debate is superficial (agents are summarizing instead of arguing)
-- The execution plan is just the first agent's suggestion with minor edits
-- Risks are generic ("execution risk", "market risk") instead of specific
-- The plan contains tasks that exceed context limits or require real-time subagent coordination
-
-If the roundtable fails these checks, either swap agents for more diverse perspectives or push the debate harder before moving to execution.
-
-## Express Mode Roundtable
-
-When the orchestrator is running in Express mode:
-- Agents state opening positions only — no challenge round, no multi-round debate.
-- The Disagreement Gate is skipped (there is no Round 2 to evaluate).
-- The orchestrator synthesizes a plan directly from opening positions.
-- The dependency graph validation still runs — Express mode skips debate, not structural checks.
-- The structured execution plan table is still produced — Express mode changes the process, not the output format.
+Express mode changes the depth of the debate, not the quality of the handoff.

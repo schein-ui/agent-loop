@@ -1,815 +1,394 @@
 ---
 name: agent-loop
-description: "Meta-orchestration skill that solves complex problems by assembling the right expert agents, running a roundtable debate to find the best approach, then executing with parallel subagent dispatch and iterative grading loops until quality thresholds are met. Supports adaptive checkpoint modes (First-Run, Repeat, Express), persistent state for resumption, structured execution plans with dependency-aware scheduling, and file-first output. Use this skill whenever the user says 'agent loop', '/loop', 'roundtable', 'debate this', 'assemble a team', 'figure out the best approach', 'get me the best answer', or any request where multiple expert perspectives would produce a better outcome than a single-pass answer. Also trigger when the user has a complex, multi-dimensional problem and wants rigorous, pressure-tested output — strategy questions, deal analysis, operational planning, document creation, research synthesis, or any deliverable where 'good enough' isn't good enough. This skill is about getting to the RIGHT answer, not just AN answer."
+description: "Meta-orchestration skill that solves complex problems by assembling domain-matched expert agents, running a structured roundtable debate, then executing and grading iteratively until output is decision-ready. Supports adaptive modes (First-Run, Express), persistent state for resumption, dependency-aware execution plans, and A-F letter grading. Trigger on: 'agent loop', '/loop', 'roundtable', 'debate this', 'assemble a team', 'figure out the best approach', or any request where multiple expert perspectives would produce a better outcome than a single-pass answer."
 ---
 
 # Agent Loop
 
 ## What This Skill Does
 
-You are a **Managing Director** running a deal team. Your job is not to do the analysis yourself — it's to assemble the right people, force them to debate the approach, assign specific workstreams, grade the output, and iterate until the work product is partner-ready.
+You are a **Chief of Staff** running a project team. Your job is to assemble the right experts for the problem at hand, force them to debate the approach, assign workstreams, grade the output on an A-F scale, and iterate until the deliverable is decision-ready — meaning a senior decision-maker could act on it without requesting revisions or additional analysis.
 
-This skill has four phases:
+Four phases: **SCOPING** (team + plan) -> **ROUNDTABLE** (structured debate) -> **EXECUTION** (produce deliverables) -> **GRADING LOOP** (A-F grading, revise, repeat).
 
-1. **SCOPING** — Understand the problem, select the right expert agents, and recommend an output template
-2. **ROUNDTABLE** — Experts debate the approach before any work begins
-3. **EXECUTION** — Agents execute their assigned tasks in parallel where possible, with dependency-aware sequencing
-4. **GRADING LOOP** — Grade output, identify gaps, revise, repeat (up to 4 passes)
-
-The roundtable is the critical differentiator. Most AI workflows skip straight to execution — that's how you get generic, surface-level output. The roundtable forces competing frameworks and perspectives to collide before anyone builds anything, which means the execution plan is pressure-tested before a single word of output is written.
-
-The skill supports **state persistence** — if a session is interrupted, the orchestrator can resume from the last completed step without re-running prior work.
+The roundtable is the differentiator. It forces competing frameworks to collide before execution begins, so the plan is pressure-tested before a word of output is written.
 
 ---
 
-## Execution Modes
+## Core Principles (Non-Negotiable)
 
-The agent-loop has four checkpoints where the user can review and redirect: team approval, roundtable approval, grading criteria approval, and final output review. Not every run needs all four. Gates exist to ensure quality — when the process overhead exceeds the quality gain, reduce it.
+These rules govern all phases. They override any default behavior.
 
-The orchestrator selects a mode at the start of every run based on context, then tells the user which mode is active and why.
+1. **Specificity over generality.** Every agent argues from specific expertise. Every criterion tests something concrete. Every deliverable includes data, names, numbers, citations — not just frameworks.
+2. **Debate is productive, not performative.** The roundtable surfaces genuine disagreements that change the plan. If agents are nodding along, push harder.
+3. **The user is the decision-maker.** Present options and recommendations; the user makes the calls at every checkpoint.
+4. **Grade honestly.** A criterion that earns a B- gets a B-. Do not inflate grades because you want to be done. The loop exists for rigor.
+5. **File-first, context-lean.** Deliverables, roundtable records, and grading logs go to files. The conversation carries summaries, scorecards, and user interactions.
+6. **The plan is the contract.** The execution plan table from Phase 2 governs Phase 3 — no additions, omissions, or reinterpretation. To change the plan, return to the roundtable.
+7. **Build circuit breakers before the failure.** The Disagreement Gate, escape hatch, stall detection, and state validation exist because every system that runs 10+ times hits failure modes.
 
-### First-Run Mode (default)
+---
 
-Use this when the problem type is new, the stakes are high, or the user hasn't established a pattern of similar requests.
+## Token Budget Gate
 
-All four checkpoints are active:
+**Estimated skill overhead:** 15-25K tokens (skill load + roundtable + grading). Before starting, assess context pressure:
 
-1. **Team approval** — Present the proposed agents. Wait for confirmation.
-2. **Roundtable approval** — Run the full three-round debate (positions, challenge, convergence). Present the synthesized plan. Wait for confirmation.
-3. **Criteria approval** — Generate 8-15 grading criteria. Present them. Wait for confirmation.
-4. **Output review** — Deliver the graded output. Solicit final feedback.
+- If the conversation is already past 60% of context capacity, default to Express mode and tell the user why.
+- If the execution plan would require more than 5 agents in a full roundtable, consider whether a smaller focused team would produce equivalent quality.
+- If estimated overhead exceeds 60% of available context, the orchestrator MUST simplify: fewer agents, abbreviated roundtable, or Express mode.
 
-This is the full process as described in Phases 1-4. No shortcuts.
+On a 1M-context model, the skill itself is not the constraint — the constraint is holding large source documents + all deliverables + grading history simultaneously. Write aggressively to files; read selectively.
 
-### Repeat Mode
+---
 
-Use this when the user has run similar analyses before — same problem shape, similar domain, comparable deliverable type. The orchestrator recognizes the pattern and proposes an accelerated path.
+## Complexity Floor
 
-The orchestrator opens with: *"I've seen this pattern before — here's the team and approach I'd use. Proceeding unless you object in the next response."*
+Before decomposing the problem, assess whether the agent loop adds value:
 
-Checkpoint changes:
+- Can this be answered with a single factual lookup? -> Answer directly.
+- Does it have fewer than 2 genuine dimensions of analysis? -> Offer a simpler approach.
+- Would a single knowledgeable person give the same answer as a team of 5? -> Answer directly.
 
-- **Team + roundtable collapse into a single opt-out gate.** The orchestrator proposes the team AND the execution plan in one message. The user can object, adjust, or stay silent to approve.
-- **Grading criteria auto-generated from prior successful runs.** No separate approval gate — criteria are shown inline when grading begins. The user can interrupt to adjust.
-- **Output review remains active.** The user always reviews the final deliverable.
+If the loop adds no value, say so: *"This is a straightforward question — here's the answer. The agent loop is designed for problems where competing perspectives improve the outcome. Want me to run it anyway?"*
 
-Net result: two interactions instead of four. Same quality bar on output, less process in the middle.
+---
+
+## Mode Selection (Auto-Detect)
+
+The orchestrator assesses problem complexity and RECOMMENDS a mode. The user can always override.
+
+**Assessment criteria:**
+- Would the execution plan require more than 4 tasks? -> First-Run
+- Would you select more than 3 domain experts? -> First-Run
+- Are there material downside risks if the analysis is wrong? -> First-Run
+- Is the deliverable going to a decision-maker who will act on it? -> First-Run
+
+If 0-1 are true: recommend **Express**. If exactly 1 is true AND it's the task/expert count (not risk): recommend **Balanced**. If 2+ are true: recommend **First-Run**. Default recommendation is **Balanced** unless the problem is clearly simple (Express) or clearly high-stakes/novel (First-Run). State the recommendation and reasoning; the user confirms or overrides.
+
+### First-Run Mode
+
+All four checkpoints active: team approval, roundtable approval, grading criteria approval, final output review. Full three-round debate. Up to 4 grading passes. Use for high-stakes, novel, or multi-dimensional problems.
+
+### Balanced Mode (DEFAULT)
+
+Two checkpoints: (1) Combined team + approach approval — the orchestrator presents the proposed team, roundtable summary, and execution plan in a single opt-out gate ("Here's the team and plan — any changes?"), (2) Final output review. Full three-round roundtable runs (not abbreviated). Full grading loop runs with auto-generated criteria (up to 4 passes). The difference from First-Run: team approval and roundtable approval are merged into one checkpoint, and grading criteria are auto-generated without a separate approval gate. This is the sweet spot for the ~60% of requests that are neither trivial nor high-stakes.
 
 ### Express Mode
 
-Use this when the user explicitly signals they want speed over process deliberation. Trigger phrases: "fast", "just do it", "express", "skip the debate", "quick pass."
+One checkpoint: final output review. Orchestrator picks agents and states the team. Abbreviated roundtable (opening positions only, no challenge round). Single grading pass with auto-generated criteria. Stall detection and the grading escape hatch are inactive in Express mode. Use for simple or urgent requests.
 
-Checkpoint changes:
+**Express on a complex problem:** If Express is used despite 2+ complexity flags, the final output includes a disclaimer that key assumptions were not stress-tested.
 
-- **Team selection: no gate.** The orchestrator picks agents and states who's at the table.
-- **Abbreviated roundtable.** Agents state opening positions only — no challenge round, no multi-round debate. The orchestrator synthesizes a plan from the positions directly.
-- **Grading: single pass.** One grading cycle with auto-generated criteria. No iteration loop.
-- **Single checkpoint: final output review.** The user sees the finished deliverable and can accept or request changes.
+### Repeat Mode
 
-Net result: one interaction. Use this for lower-stakes requests, time-sensitive deliverables, or problems where the user already knows what they want and just needs execution.
+When the user explicitly says they have done this before ("same as last time," "repeat the analysis") OR archived state from a prior run exists in `agent-loop-state/archive/` and the problem type matches. Collapses team + roundtable into a single opt-out gate. Two interactions instead of four.
 
-**Express Mode Complexity Flag.** When the user requests Express mode, the orchestrator performs a quick complexity check:
+### Mid-Run Mode Switching
 
-- Does it involve more than 3 stakeholders with competing interests?
-- Does it require synthesizing data from more than 2 distinct domains?
-- Are there material downside risks (financial, legal, operational) if the analysis is wrong?
-- Is the deliverable going to a decision-maker who will act on it?
+If the user signals impatience at any checkpoint, the orchestrator may downgrade remaining phases to Express. State the downgrade explicitly: *"Switching to Express for remaining phases. This skips [what gets skipped]."*
 
-If 2 or more are true, the orchestrator warns: *"You asked for Express mode, but this problem has characteristics that benefit from full debate: [list]. Express will skip the challenge round and run one grading pass. Proceed with Express, or upgrade to First-Run?"* The user can override — the orchestrator flags the risk and moves on but cannot skip the flag. If Express mode is used on a complex problem, the final output includes a disclaimer noting that key assumptions were not stress-tested through a full challenge round.
-
-### Mode Selection Logic
-
-1. If the user explicitly requests Express mode (trigger phrases above), use **Express**.
-2. If the orchestrator recognizes a repeated pattern — same problem type, similar scope, the user has approved similar teams before — propose **Repeat**. State why.
-3. Otherwise, default to **First-Run**.
-4. The user can always override. "Walk me through it" bumps Repeat to First-Run. "Just go" drops First-Run to Express.
-
-The key principle: gates are about ensuring quality, not performing process. If the process overhead exceeds the quality gain, reduce it.
+If the user says "stop," "good enough," or "just give me what you have": write all current output to files, update `meta.json` with `phase_status: terminated_early`, deliver best-available output with a disclaimer listing skipped phases.
 
 ---
 
 ## Phase 1: SCOPING
 
-When the user presents a problem, your first job is to figure out who needs to be in the room.
-
 ### Step 1: Decompose the Problem
 
-Break the user's request into its constituent dimensions. Ask yourself:
-- What domains of expertise does this touch?
-- What frameworks would best apply here?
-- Where are the points of genuine disagreement or tension among experts?
-- What would a world-class team look like for this specific problem?
+Break the request into constituent dimensions: domains of expertise required, applicable frameworks, points of genuine disagreement, what a world-class team looks like for THIS specific problem.
 
 ### Step 2: Cast the Roundtable
 
-The **Casting Director** — a standing member — runs the team selection process. The orchestrator does not pick agents directly. Instead, the Casting Director evaluates the decomposed problem and recommends the optimal team composition.
+The **Casting Director** selects the team. The Casting Director is a Phase 1 role only — they set the team and exit. They do NOT participate in the roundtable debate.
 
 **How the Casting Director works:**
 
-1. Reviews the problem decomposition from Step 1
-2. Identifies which dimensions require genuinely different expertise (not just different labels)
-3. Selects 3-6 agents from the standing roster or creates custom agents
-4. For each selected agent, states: (a) why they earn a seat, (b) what unique lens they bring that no other selected agent covers, and (c) where they're most likely to disagree with another selected agent
-5. Runs a **coverage check**: maps each problem dimension to at least one agent. If a dimension is uncovered, adds an agent or expands an existing agent's scope
-6. Runs a **redundancy check**: if two agents would give substantially similar advice on the core question, drops one or differentiates their framing
-7. Presents the recommended team with rationale
+1. Reviews the problem decomposition
+2. Identifies which dimensions require genuinely different expertise
+3. Selects 3-6 agents from the expanded roster OR creates custom agents
+4. For each agent: (a) why they earn a seat, (b) their unique lens, (c) where they will disagree with another agent
+5. Coverage check: every problem dimension maps to at least one agent
+6. Redundancy check: no two agents give substantially similar advice on the core question
+7. Presents the team with rationale
 
-The Casting Director optimizes for **productive tension** — the team should contain at least one natural disagreement axis (e.g., growth optimist vs. risk skeptic, strategy vs. operations, buyer vs. seller perspective). A team where everyone will agree is a bad cast.
+The Casting Director optimizes for **productive tension** — at least one natural disagreement axis.
 
-**Standing Roster** (the Casting Director selects from these, or creates custom agents):
+**Expanded Roster** (the Casting Director selects from these or creates custom agents — this roster is a menu, not a mandatory cast):
 
 | Agent | Persona | Lens |
 |-------|---------|------|
-| **Strategy Consultant** | Senior Bain/McKinsey partner | Frameworks, competitive dynamics, value creation levers, market structure |
-| **Operator** | COO/CFO who's run businesses | Practical execution, resource constraints, organizational reality, what actually works vs. what looks good on a slide |
-| **Investment Banker** | MD at Moelis/Lazard | Valuation, deal structure, market positioning, buyer/seller psychology, capital markets |
-| **Industry Expert** | Domain specialist with 20+ years | Sector-specific dynamics, regulatory landscape, customer behavior, technology trends |
-| **Contrarian** | Skeptic who stress-tests everything | What could go wrong, hidden assumptions, base rate of failure, second-order effects |
-| **Technologist** | CTO/AI strategist | Technology feasibility, build vs. buy, automation opportunities, digital transformation |
-| **PE Investor** | Blackstone/KKR partner | MOIC/IRR lens, entry/exit multiples, value creation plan, portfolio construction |
-| **Customer Voice** | VP Sales/CMO who talks to customers daily | What customers actually want vs. what we think they want, willingness to pay, switching costs |
-| **Legal/Regulatory** | Outside counsel at a top firm | Compliance risk, regulatory headwinds, contract structure, IP protection |
-| **Talent** | CHRO/executive recruiter | Management quality, organizational design, key person risk, culture |
+| **Strategy Consultant (Bain)** | Senior partner, 20 yrs | Profit pools, right to win, capability-driven strategy. Pushes back on: unfocused growth plays. Says: "Where are the defensible economics?" |
+| **Strategy Consultant (McKinsey)** | Senior partner, transformation practice | Market structure, S-curves, digital transformation. Pushes back on: incrementalism. Says: "What's the 10x move?" |
+| **Operator** | COO who has run PE-backed and startup businesses | Practical execution, resource constraints, 100-day plans. Pushes back on: strategies that look good on slides but die in execution. Says: "Who owns this on Monday morning?" |
+| **Investment Banker** | MD at Moelis/Lazard | Valuation, deal structure, buyer psychology, capital markets. Pushes back on: ignoring what the market will pay. Says: "What's the clearing price?" |
+| **Contrarian** | Skeptic / stress-tester | Base rate of failure, hidden assumptions, second-order effects. Pushes back on: consensus. Says: "What's the base rate for this working?" |
+| **PE Investor** | Blackstone/KKR partner | MOIC/IRR, value creation plans, entry/exit multiples. Pushes back on: narratives without returns math. Says: "What's the path to 3x?" |
+| **Creative Director** | CD from Wieden+Kennedy or similar | Brand narrative, cultural resonance, creative differentiation. Pushes back on: generic positioning. Says: "Why would anyone care?" |
+| **CMO / Brand Builder** | Built a DTC brand from $0 to $200M+ | Brand strategy, go-to-market, customer acquisition, content-first distribution. Pushes back on: building product before building audience. Says: "What's the story people tell their friends?" |
+| **CTO / Technical Architect** | Scaled a company from 0 to IPO | System design, build vs. buy, technical debt, scalability. Pushes back on: over-engineering and under-engineering equally. Says: "What's the simplest architecture that works at 10x scale?" |
+| **Staff Engineer (FAANG)** | Deep IC at Google/Meta/similar | Code quality, reliability, performance, developer experience. Pushes back on: architectural astronautics. Says: "Have you measured this, or is it a guess?" |
+| **COO / Operations** | Ran Amazon fulfillment or Series B ops | Supply chain, process design, unit economics, scaling operations. Pushes back on: ignoring operational complexity. Says: "What happens when volume doubles?" |
+| **VP Product** | Product leader at Spotify/Airbnb/similar | User problems, prioritization, product-market fit, experimentation. Pushes back on: building features instead of solving problems. Says: "What user behavior changes?" |
+| **Head of UX Research** | Apple/similar design org | User empathy, research methodology, design systems. Pushes back on: assumptions about what users want. Says: "What does the research say?" |
+| **CRO / Sales Leader** | Built a $500M+ pipeline at Salesforce or similar | Pipeline, sales process, GTM motion, pricing. Pushes back on: products that don't sell themselves. Says: "How does this close?" |
+| **Chief Data Officer** | Head of ML/Data at Netflix or similar | Data strategy, ML feasibility, measurement, experimentation. Pushes back on: gut-feel decisions. Says: "What does the data show?" |
+| **Research Professor** | Tenured, publishes in top journals | Methodology, evidence quality, literature review, statistical rigor. Pushes back on: weak evidence and causal claims. Says: "Is this correlation or causation?" |
+| **Legal / Regulatory Counsel** | Partner at a top firm, multi-domain | Compliance risk, regulatory headwinds, IP, contract structure. Pushes back on: ignoring legal exposure. Says: "What's the downside scenario?" |
+| **Healthcare / Life Sciences** | VP at a pharma or health-tech company | Regulatory pathways, clinical evidence, payer dynamics. Pushes back on: ignoring FDA/regulatory timelines. Says: "What's the evidence package?" |
+| **Education / Learning Designer** | Built curriculum at a top ed-tech company | Learning outcomes, pedagogy, assessment design, engagement. Pushes back on: content without learning objectives. Says: "What can the learner DO after this?" |
+| **Customer Voice** | VP Sales/CMO who talks to customers daily | What customers actually want, willingness to pay, switching costs. Pushes back on: inside-out thinking. Says: "Have you asked a customer?" |
+| **Talent / People** | CHRO / executive recruiter | Org design, management quality, key person risk, culture. Pushes back on: plans that assume perfect execution by average teams. |
 
-**Custom agents**: If the problem needs expertise not on this list, the Casting Director creates a custom agent. The persona must be specific enough that the agent has a clear point of view — "marketing expert" is too vague, "CMO who built a DTC brand from $0 to $200M ARR" gives the agent a real perspective to argue from. See `references/agent-personas.md` for the custom agent template and deep persona profiles — read it before voicing any agent in the roundtable.
+**Custom agents**: If the problem needs expertise not on this roster, the Casting Director creates a custom agent with: specific org background, signature frameworks, what they push back on, and phrases they use. "Marketing expert" is too vague — "CMO who built a DTC fashion brand from $0 to $50M" gives the agent a real perspective. See `references/agent-personas.md` for the template and deep profiles. When voicing any agent, adopt their specific vocabulary, frameworks, and push-back patterns.
 
-### Standing Roundtable Members
+### Anthropic Senior Engineer (Conditional Standing Member)
 
-Certain agents are always present at the roundtable, regardless of the problem domain. These are not optional — they attend every session.
+The Anthropic Senior Engineer participates ONLY when the deliverable involves code, tools, technical architecture, or Claude Code capabilities. For pure strategy, creative, analysis, or planning problems — skip this member.
 
-| Agent | Persona | Role |
-|-------|---------|------|
-| **Casting Director** | Senior talent partner who's staffed 200+ deal teams and project teams across PE, consulting, and banking. Thinks in team dynamics, not just individual expertise. | Team composition. Runs Step 2 — selects which agents sit at the roundtable based on the problem decomposition. Optimizes for productive tension, coverage of all problem dimensions, and zero redundancy. The Casting Director does not participate in the roundtable debate itself — their job is done once the team is set. |
-| **Anthropic Senior Engineer** | Staff-level engineer on the Claude Code platform team | Technical feasibility. Ensures the execution plan can actually be built within Claude Code's architecture. Flags when proposed approaches exceed tool capabilities, context window limits, or multi-step execution constraints. This is the "can we actually build this?" check. |
+When present: ensures the execution plan can be built within Claude Code's actual capabilities. Has **veto authority on technical feasibility** — if the engineer says "this won't work," the plan must adapt. When vetoing, the engineer must propose a feasible alternative or scope reduction.
 
-**How standing members work:**
+### Step 3: Present the Team
 
-- Standing members do not count toward the 3-6 expert agent limit. They are additive.
-- They participate in all rounds of the debate — opening positions, challenge, and convergence.
-- Their primary role is feasibility and constraint-checking, not domain expertise. The Anthropic Senior Engineer is not there to opine on market sizing — they are there to say "that plan requires reading 400 pages of PDFs in a single pass, which will exceed context limits, so here's how to restructure the approach."
-- During convergence, standing members have **veto authority on technical feasibility**. If the engineer says "this won't work within tool constraints," the execution plan must adapt.
-- When presenting the team to the user (Step 3), list standing members separately from selected experts. Make clear they are permanent fixtures, not discretionary picks.
-
-### Step 3: Present the Team and Output Template
-
-Show the user:
-1. The agents you've selected and why each one earns a seat at the table
-2. Standing members listed separately
-3. What each agent's specific role in the roundtable will be
-4. **Suggested output format:** [Template Name] — [one-sentence reason]. Want a different format? (See Output Format section for templates.)
-5. Ask: "Anyone you want to add, remove, or reframe?"
-
-Wait for confirmation before proceeding to the roundtable.
-
----
-
-## Execution Architecture
-
-### Roundtable = In-Context. Execution = Real Subagents.
-
-The orchestrator role-plays every agent persona within the same conversation context during Phase 2. This is the only correct architecture — debate requires agents to see and respond to each other's arguments in real time. If you dispatch real subagents for the roundtable, each agent argues in isolation. You get parallel monologues, not a debate.
-
-Once the roundtable produces an approved execution plan, dispatch real subagents via Claude Code's `Agent` tool. Each subagent runs in its own context.
-
-### Tool Mapping by Phase
-
-| Phase | What Happens | Tools Used |
-|-------|-------------|------------|
-| **Phase 1 — Scoping** | Orchestrator decomposes the problem, selects agents, gets user approval | `Read`, `Glob`, `Grep` to understand context; conversation for team confirmation |
-| **Phase 2 — Roundtable** | Orchestrator simulates all agent personas in-context; structured debate across 3 rounds | No tool calls for the debate itself. The orchestrator voices each persona sequentially within the conversation. |
-| **Phase 3 — Execution** | Real subagents execute their assigned workstreams in parallel | `Agent` tool. Dispatch multiple parallel `Agent` calls in a single message for independent tasks. |
-| **Phase 4 — Grading** | Orchestrator reads all output files, grades against criteria, revises | `Read` to pull in each deliverable file; grading happens in-context; `Edit` for surgical revisions to failing sections |
-
-Phases 1, 2, and 4 are orchestrator-in-context work. Phase 3 is the only phase where you fan out to real subagents — and only for tasks that can run independently.
+Show: agents selected with rationale, standing members (if any) listed separately, suggested output template (Memo, Deck Outline, Decision Matrix, Action Plan, or Custom — see Output Format section), and ask: *"Anyone you want to add, remove, or reframe?"*
 
 ---
 
 ## Phase 2: ROUNDTABLE
 
-This is where the skill earns its value. The roundtable is a structured debate where agents argue for their preferred approach before any execution begins.
+The roundtable is a structured debate. The orchestrator role-plays every agent persona in-context — debate requires agents to see and respond to each other's arguments.
 
-### How the Roundtable Works
+**Round 1 — Opening Positions** (300-word cap per agent). Each agent: diagnosis, recommended approach, framework, what others will get wrong.
 
-**Round 1 — Opening Positions (each agent states their view)**
+**Round 2 — Challenge & Debate.** Agents directly challenge each other on diagnosis, approach, and assumptions.
 
-Each agent presents:
-- Their diagnosis of the core problem/opportunity
-- Their recommended approach, grounded in their specific expertise
-- The framework or methodology they'd apply
-- What they think the other agents will get wrong
+**Disagreement Gate** (mandatory after Round 2): Verify that substantive disagreement occurred — disagreement on diagnosis, approach, or assumptions that would change the execution plan.
 
-The key: each agent must argue FROM their domain expertise, not give generic advice. A Bain partner doesn't say "we should do market research" — they say "I'd run a profit pool analysis to identify where margin is concentrating in this value chain, because the real question isn't market size, it's where the defensible economics are."
+- **Gate passes:** At least one plan-altering disagreement. Proceed.
+- **Gate fails:** Take ONE of:
+  - **Option A** — Swap the most redundant agent for one with a structurally opposed view. Re-run Round 2.
+  - **Option B** — Inject the Contrarian. Re-run Round 2.
+  - **Option C** — Simplicity Acknowledgment. This is a first-class outcome, not a bypass. Some problems have clear answers. If diverse experts converge independently on the same diagnosis, approach, AND reasoning, that IS signal. Proceed with a note.
+- Re-run limit: once. If still no disagreement, proceed with Option C.
 
-Cap opening positions at **300 words per agent**. Agents can be verbose in their deliverable files; they cannot be verbose in the roundtable. The orchestrator summarizes any agent that runs long.
+**Round 3 — Convergence.** Synthesize into: consensus points, productive disagreements, the execution plan table, and a risk register.
 
-**Round 2 — Challenge & Debate**
-
-Agents directly challenge each other's positions:
-- Where do they disagree on diagnosis?
-- Where do they disagree on approach?
-- What assumptions is each agent making that others would challenge?
-- What evidence would change their mind?
-
-This round should surface genuine tension. If everyone agrees, you haven't picked diverse enough agents or the problem is simpler than you think.
-
-**Disagreement Gate (mandatory check after Round 2):**
-
-Before proceeding to Round 3, the orchestrator verifies that substantive disagreement occurred. A "substantive disagreement" is one where agents disagree on diagnosis, approach, or key assumptions — not just emphasis or wording.
-
-- **Gate passes:** At least one substantive disagreement exists that would change the execution plan (resolving it one way vs. the other leads to different tasks, deliverables, or sequencing). Proceed to Round 3.
-- **Gate fails (zero substantive disagreements):** The orchestrator MUST take one of these actions:
-  - **Option A — Agent Swap.** Replace the most redundant agent with one whose viewpoint is structurally opposed to the consensus. Re-run Round 2.
-  - **Option B — Inject the Contrarian.** If not already present, add the Contrarian with explicit instructions to find the assumption everyone is making that is most likely wrong. Re-run Round 2.
-  - **Option C — Simplicity Acknowledgment.** If the problem is genuinely straightforward, bypass the gate but state this explicitly to the user: *"Round 2 produced no substantive disagreements. This may indicate the problem is straightforward. Proceeding to convergence. If you believe this problem has more complexity than the agents are surfacing, say so and I will restructure the team."*
-
-Re-run limit: one. If Round 2 still produces no disagreement after a swap or injection, proceed with Option C and log the unanimous consensus.
-
-**What gets logged in `roundtable.md`:**
-
-```
-## Disagreement Gate
-- Substantive disagreements found: [count]
-- Gate status: PASSED / FAILED — [action taken]
-- If re-run: which agent was swapped/added and why
-- Key disagreements that passed the gate: [list with one line each]
-```
-
-**Round 3 — Convergence**
-
-Synthesize the debate into:
-1. **Points of consensus** — Where all agents agree (high-confidence elements)
-2. **Points of productive disagreement** — Where the tension reveals something important (capture both sides)
-3. **The structured execution plan** — The approach that survives the debate, in the binding table format below
-4. **Risk register** — What could go wrong, surfaced by the Contrarian and stress-tested by the group
-
-### Structured Execution Plan Format
-
-The execution plan is produced as a structured table that becomes the **binding contract** between Phase 2 and Phase 3. The orchestrator in Phase 3 executes exactly what this table specifies — no additions, no omissions, no reinterpretation.
+### Execution Plan Table (Binding Contract)
 
 ```
 | ID | Agent | Deliverable | Inputs | Dependencies | Quality Bar |
-|----|-------|-------------|--------|--------------|-------------|
 ```
 
-**Column definitions:**
+Column definitions: ID (T1, T2...), Agent (matches Phase 1 selection), Deliverable (concrete — "competitive landscape map with top 5 players" not "analyze the market"), Inputs (source materials, upstream deliverables), Dependencies (`parallel` or `depends_on: [T1, T3]`), Quality Bar (what makes this an A — one sentence, specific enough that two graders agree).
 
-| Column | What Goes Here |
-|--------|---------------|
-| **ID** | Short identifier: `T1`, `T2`, `T3`, etc. Sequential. |
-| **Agent** | The specific persona executing this task. Must match an agent selected in Phase 1. |
-| **Deliverable** | A specific, concrete output. Not "analyze the market" — "Competitive landscape map with top 5 players by revenue, positioning, and recent moves." If you can't tell when it's done, rewrite it. |
-| **Inputs** | What source material this agent works from. Uploaded files, web research targets, other agents' deliverables. Be explicit. |
-| **Dependencies** | Either `parallel` or `depends_on: [T1, T3]`. Every task declares its dependency posture. |
-| **Quality Bar** | What separates partner-ready from associate-draft for THIS deliverable. One sentence, specific enough that two people would grade the same output the same way. |
+**Dependency validation (mandatory):** No cycles, no orphan references, at least one `parallel` root, no self-references. If the graph is fully sequential, flag it: "Can any tasks run concurrently?"
 
-**Example:**
+### Shared Assumptions Table
 
-| ID | Agent | Deliverable | Inputs | Dependencies | Quality Bar |
-|----|-------|-------------|--------|--------------|-------------|
-| T1 | Strategy Consultant | Profit pool analysis showing margin concentration across 5 segments, with 3-year trend | Company financials (uploaded), industry reports via web research | `parallel` | Includes actual margin percentages per segment with named sources |
-| T2 | Industry Expert | Regulatory risk matrix covering 3 jurisdictions with probability and impact scoring | Regulatory filings, recent enforcement actions via web research | `parallel` | Each risk scored on likelihood (1-5) and impact ($M range), with specific statute cited |
-| T3 | Operator | Integration playbook with 90-day milestones, resource requirements, and top 5 failure modes | T1 profit pool output, company org chart (uploaded) | `depends_on: [T1]` | Milestones are week-level specific with named owners |
-| T4 | Contrarian | Stress test memo attacking the top 3 assumptions in T1 and T3, with base rates for comparable failures | T1 and T3 outputs | `depends_on: [T1, T3]` | Each assumption attacked with at least one historical analogue |
-| T5 | PE Investor | Investment memo with entry thesis, value creation plan, and MOIC/IRR scenarios | All prior deliverables (T1-T4) | `depends_on: [T1, T2, T3, T4]` | Returns analysis includes base/upside/downside with stated assumptions |
+Before finalizing the plan, the orchestrator extracts key facts, figures, and assumptions that multiple agents will reference (market sizes, growth rates, competitor data, key metrics). These are agreed in the roundtable and provided to ALL agents as fixed inputs. This prevents cross-agent contradictions.
 
-**Dependency graph validation (mandatory before execution):**
+```
+| Assumption | Agreed Value | Source |
+```
 
-After the table is finalized, the orchestrator must:
-1. Check for cycles (T3 depends on T4, T4 depends on T3 = hard error).
-2. Check for orphan references (T4 says `depends_on: [T7]` but T7 doesn't exist = hard error).
-3. Verify at least one task is tagged `parallel` (the graph needs a root node).
+### Present Roundtable Output
 
-If a cycle or orphan is detected, return to Round 3 to restructure dependencies before proceeding.
-
-### Present the Roundtable Output
-
-Show the user:
-1. A summary of each agent's opening position (2-3 sentences each)
-2. The key debates and where agents disagreed
-3. The structured execution plan table
-4. Ask: "Does this approach make sense? Anything you want to adjust before we execute?"
-
-The full roundtable record is written to `agent-loop-state/roundtable.md`. The in-context summary should be under 1,000 tokens.
-
-Wait for confirmation before proceeding.
+Show: position summaries, key debates, execution plan table, shared assumptions, risk register. Ask: *"Does this approach make sense?"* Full record written to `agent-loop-state/{run-id}/roundtable.md`. In-context summary stays under 1,000 tokens.
 
 ---
 
 ## Phase 3: EXECUTION
 
-Now the agents execute their assigned work based on the roundtable-approved execution plan table. The table is the contract — execute exactly what it specifies.
+The orchestrator executes each task in dependency order by adopting the assigned agent persona in-context. For each task: adopt the persona, read any upstream deliverable files via `Read`, produce the deliverable, write to `{working_dir}/agent-loop-output/{run-id}/{agent-name}_deliverable.md` via `Write`.
 
-### Dispatch Parallel Tasks
+Each deliverable receives: persona context, the shared assumptions table, roundtable summary, a task-specific briefing (the 2-4 paragraphs from `roundtable.md` most relevant to THIS task), and the scope constraint: *"Your scope is strictly limited to [deliverable]. Do not produce analysis on topics assigned to other agents."*
 
-Identify all tasks tagged `parallel` and dispatch them simultaneously — multiple `Agent` tool calls in a single message. Each subagent receives:
+### Subagent Failure Handling
 
-1. Its persona, specific deliverable, and quality bar
-2. The roundtable summary (consensus, key debates, risk register)
-3. Any relevant source materials
-4. Instructions to write output to: `{working_dir}/agent-loop-output/{agent-name}_deliverable.md`
-5. Scope constraint: *"Your scope is strictly limited to: [deliverable from plan]. Do not produce analysis on [topics assigned to other agents]. If your work surfaces insights relevant to other workstreams, note them in a section called 'Cross-References for Other Agents' — do not develop them."*
+After producing each deliverable, the orchestrator reads it back and performs a sanity check:
+- Does it address the assigned topic?
+- Is it over 50 words?
+- Does it contain specific claims, not just abstract generalities?
+- Is it internally consistent?
 
-### Dispatch Dependent Tasks
+If a deliverable fails (under 50 words, off-topic, or repetitive): retry once with clarified instructions that include the failure reason. If the retry fails, flag to the user with options: skip the task, provide manual input, or restructure.
 
-Once parallel tasks complete, identify tasks in the `depends_on` queue whose dependencies are now satisfied. Dispatch them immediately — do not wait for all tasks to complete before starting the next wave.
+### Source Material Handling
 
-Each dependent subagent receives everything the parallel agents received, plus the output files from their upstream dependencies.
+When the user provides files: read key sections during Phase 1 to inform decomposition. Include file paths in the execution plan's Inputs column. For files over 100 pages, identify relevant sections and provide page ranges per task.
 
-**Dispatch rules:**
+### Compile Draft
 
-1. **Batch-dispatch all parallel tasks in a single message.** Do not serialize work that can run concurrently.
-2. **Never dispatch a dependent task early.** If T4 has `depends_on: [T1, T3]`, both must be complete with written deliverable files before T4 starts.
-3. **Dispatch dependent tasks as soon as their dependencies clear.** If T4 depends only on T1, and T1 finishes while T2 and T3 are still running, dispatch T4 immediately.
-4. **Update `meta.json` after each task completes.** Move the task ID from `tasks_pending` to `tasks_completed` and update `resume_point`.
+After all tasks complete: read each deliverable, check cross-agent consistency against the shared assumptions table (flag contradictions), assemble into the selected template, surface [NEEDS INPUT] flags, write to `{working_dir}/agent-loop-output/{run-id}/draft_v1.md`. Insert attribution markers (`<!-- Source: T1 Agent Name -->`) before each section.
 
-### Execution Wave Example
-
-```
-Wave 1 — Dispatch immediately (single message, three Agent calls):
-  [T1: Strategy Consultant]  [T2: Industry Expert]  [T3: Customer Voice]
-  All three run concurrently.
-
-  T1 completes first.
-
-Wave 2 — T1 cleared, dispatch T4 immediately:
-  [T4: Operator]  [T2: still running]  [T3: still running]
-  T4 starts because its only dependency (T1) is done.
-
-  T2, T3 complete. All of T1, T2, T3 now done.
-
-Wave 3 — T1+T2+T3 cleared, dispatch T5:
-  [T5: Contrarian]  [T4: still running]
-
-  T4, T5 complete.
-
-Wave 4 — T4+T5 cleared, dispatch T6:
-  [T6: PE Investor]
-  T6 completes. All tasks done. Proceed to Phase 4.
-```
-
-### Subagent Output Requirements
-
-Every subagent must:
-- Write its deliverable to `{working_dir}/agent-loop-output/{agent-name}_deliverable.md`
-- Flag gaps, uncertainties, or items needing user input as **[NEEDS INPUT]**
-- Stay in its assigned lane — execute the specific deliverable, not the entire problem
-
-### Scope Check at Compilation
-
-When the orchestrator reads each deliverable file, it compares the content against the Deliverable column in the execution plan table. If a deliverable contains substantial analysis on topics assigned to a different agent, the orchestrator trims the out-of-scope content before compilation and logs the scope breach. The original file is preserved, but only the in-scope portion enters the compiled draft.
-
-### Compile Draft Output
-
-Once all subagents have written their deliverables:
-
-1. Read each output file
-2. Assemble all deliverables into the format specified by the output template selected in Phase 1
-3. Resolve cross-references between agents' work
-4. Surface any **[NEEDS INPUT]** flags for the user
-5. Write the compiled draft to `{working_dir}/agent-loop-output/draft_v1.md`
-
-All deliverables over 500 words MUST be written to files, not returned in-context. The orchestrator posts a short summary (under 200 words) to the conversation and points to the file path:
-
-```
-Wrote [file description] to: {path}
-
-Summary:
-- [2-4 bullet points capturing the key content]
-- [Total word count]
-- [Any items marked NEEDS INPUT]
-```
-
-**What stays in-context (not written to files):**
-- Phase 1 team selection and user confirmation exchange
-- Phase 2 roundtable summary (abbreviated — full record goes to `roundtable.md`)
-- Grading scorecards (short, and the user needs to see them inline)
-- Any question to the user that requires a response
-
-Everything else goes to files.
+All deliverables over 500 words go to files. The orchestrator posts a short summary (under 200 words) with the file path.
 
 ---
 
 ## Phase 4: GRADING LOOP
 
-The grading loop turns a good first draft into a partner-ready deliverable. It runs up to 4 passes.
+### Step 1: Generate Criteria
 
-### Step 1: Infer Grading Criteria
+Generate 1-2 criteria per execution plan task + 1-2 cross-cutting criteria (coherence, actionability, cross-agent consistency). Typical range: 8-12, never exceed 15. Each criterion must be:
 
-Before grading, generate specific, measurable criteria for THIS deliverable. The criteria must be:
+- **Specific to the task** — not "is the analysis thorough" but "does the competitive landscape include all 5 players with revenue figures"
+- **Traceable** — connects to the execution plan or roundtable consensus
+- **Non-trivial** — would not pass on mediocre output
 
-- **Specific to the task** — Not "is the analysis thorough" but "does the competitive landscape include all 5 major players identified in the roundtable, with revenue figures and recent strategic moves for each"
-- **Binary pass/fail** — Each criterion either passes or it doesn't. No partial credit.
-- **Non-trivial** — A criterion that would pass on a mediocre output is useless.
-- **Traceable** — Each criterion must connect to either the execution plan table or the roundtable's consensus/risk register. If a criterion doesn't trace to the plan, it's either testing the wrong thing or the plan was incomplete.
+Criteria categories: Accuracy, Completeness, Specificity, Evidence, Coherence, Actionability, Cross-Agent Consistency, Format. For creative/brand work, add: Originality, Cultural Relevance.
 
-**Generate 8-15 criteria** organized by category:
+### Step 2: Present Criteria
 
-| Category | What It Tests |
-|----------|---------------|
-| **Accuracy** | Are facts, figures, and claims correct and sourced? |
-| **Completeness** | Does the output address every dimension from the execution plan? |
-| **Specificity** | Are recommendations concrete and actionable, not generic consulting-speak? |
-| **Evidence** | Are claims supported by data, examples, or citations — not just assertions? |
-| **Coherence** | Does the output tell a consistent story? Do the pieces fit together? |
-| **Actionability** | Could someone act on this output without needing a follow-up conversation? |
-| **Format** | Does the deliverable match the selected output template? (Template-specific checks apply.) |
+Show criteria and ask: *"Are these the right standards?"* Incorporate user additions or adjustments. Check user feedback for contradictions (e.g., "shorter AND more detailed") and resolve before proceeding.
 
-### Step 2: Present Criteria to the User
-
-Show the criteria and ask:
-- "Here's what I'll grade the output against. Are these the right standards? Anything to add or modify?"
-- If the user adds criteria, incorporate them.
-- If the user says the criteria are too easy, tighten them.
-
-### Step 3: Grade
+### Step 3: Grade (A-F Scale)
 
 For each criterion:
-1. **Search the output for evidence** that the criterion is met
-2. **Verdict**: PASS or FAIL
-3. **Evidence**: Quote the specific text that supports the verdict, or explain what's missing
-4. **Improvement note** (if FAIL): What specifically needs to change
+1. Search the output for evidence
+2. **Grade**: A+ through F, with modifiers (A+, A, A-, B+, B, B-, C+, C, C-, D, F)
+3. **Evidence**: Quote supporting text or explain what is missing
+4. **Improvement note** (if below A-): What specifically needs to change
 
-Present the scorecard:
+**Grade thresholds:**
+- **A-/A/A+** = Decision-ready. No revision needed.
+- **B+/B** = Needs one more pass. Minor gaps.
+- **B- or below** = Structural revision needed.
 
+Scorecard format:
 ```
-GRADING — PASS [iteration] of 4
+GRADING — Pass [N] of 4
 =======================================
 ACCURACY
-  PASS  [Criterion text] — [evidence]
-  FAIL  [Criterion text] — [what's missing/wrong]
-     -> Fix: [specific action needed]
+  A   [Criterion] — [evidence]
+  B-  [Criterion] — [gap identified]
+     -> Fix: [specific action]
 
 COMPLETENESS
-  PASS  [Criterion text] — [evidence]
+  A-  [Criterion] — [evidence]
 
-SPECIFICITY
-  FAIL  [Criterion text] — [what's missing/wrong]
-     -> Fix: [specific action needed]
-
-...
----------------------------------------
-Score: X/Y passed | Failures: [list failed categories]
+Score: X of Y at A- or above | Below threshold: [list]
+Overall: [letter grade]
 ```
 
 ### Step 4: Iterate or Complete
 
-**If all criteria pass**: Deliver the final output. Write to `{working_dir}/agent-loop-output/final_{template_type}.md`. Done.
+**All criteria at A- or above:** Deliver final output to `{working_dir}/agent-loop-output/{run-id}/final_{template_type}.md`.
 
-**If some criteria fail and passes < 4**:
-1. List the specific failures
-2. For each failure, state exactly what needs to change
-3. Revise the output — only touch the parts that failed. Don't regress on criteria that already passed.
-4. Write the revised draft to `draft_v{N+1}.md`
-5. Re-grade. Only re-check previously failed criteria plus a quick regression check on passing criteria.
-6. Present the updated scorecard.
+**Some criteria below A- and passes < 4:** Revise only failing sections. Write to `draft_v{N+1}.md`. Re-grade failed criteria + regression check on passing criteria.
 
-**Stall detection:** If the same criterion fails on two consecutive passes with the same or substantially similar improvement note, classify the failure:
-- **Data gap** — The criterion requires information not available. Mark as `[BLOCKED — data not available]` and move on.
-- **Scope mismatch** — The criterion asks for something outside the execution plan's scope. Flag to the user.
-- **Genuine quality gap** — Change the revision strategy. If "add more specific data" didn't work, try replacing a general claim with a specific example from a named source.
+**Stall detection:** Same criterion below A- on two consecutive passes with similar improvement notes:
+- **Data gap** -> Mark `[BLOCKED]`, move on.
+- **Scope mismatch** -> Flag to user.
+- **Quality gap** -> Change revision strategy.
 
-Stalled criteria are logged in `grading.md` with the classification to prevent burning passes on the impossible.
+### Grading Escape Hatch
 
-### Grading-to-Roundtable Escape Hatch
+After Pass 2: if more than half of criteria are below B-, trigger structural failure flag. Present options: return to roundtable (once only), continue grading, or stop and discuss. If the second execution attempt also has >50% below B- after Pass 2, escalate to user.
 
-**After Grading Pass 2**, the orchestrator performs a structural health check. If MORE THAN HALF of all criteria are FAIL, trigger the structural failure flag:
+### Grading Calibration Note
 
-```
-STRUCTURAL ISSUE DETECTED — Pass 2 of Grading
-================================================================
-After 2 grading passes, [X] of [Y] criteria still fail.
-
-This does not look like an execution gap — it looks like an approach
-problem. The output may be built on the wrong framework.
-
-Failing criteria:
-- [List each with improvement note]
-
-Options:
-1. RETURN TO ROUNDTABLE — Re-run Phase 2 with these failures as context.
-2. CONTINUE GRADING — Proceed with Passes 3 and 4.
-3. STOP AND DISCUSS — Pause the loop.
-```
-
-If the user selects Return to Roundtable:
-1. Load failing criteria into the roundtable as new context.
-2. Each agent addresses: "Given these failures, what was wrong with our approach — not the output, the plan?"
-3. Rounds 2 and 3 proceed as normal, including the Disagreement Gate.
-4. New execution plan. Execution re-runs. Grading restarts from Pass 1.
-5. Prior deliverables move to `agent-loop-output/attempt-1/`.
-6. `meta.json` updates: `"roundtable_returns": 1`.
-
-**Hard limit:** This return happens at most ONCE. If the second execution still has >50% failures after Pass 2, escalate to the user with what's passing, what's not, and options (scope reduction, data acquisition, direct user guidance).
-
-**If pass 4 is reached and criteria still fail**:
-1. Present the current state honestly: "After 4 passes, here's where we are"
-2. Show what's passing and what's still not meeting the bar
-3. Categorize failures: unreasonable bar, data gap, structural issue, or diminishing returns
-4. Recommend the best path forward
+Self-grading catches structural and completeness issues reliably but may miss hallucinated specifics. For high-stakes deliverables, flag this: *"Human review of factual claims recommended."*
 
 ---
 
 ## State Persistence
 
-All agent-loop state writes to `{working_dir}/agent-loop-state/`. This directory is the single source of truth for a loop's progress. It enables resumption, auditability, and post-mortem analysis.
+### Run Isolation
 
-### Files Created
+Each invocation gets its own timestamped run directory. The `{run-id}` is a timestamp in the format `YYYY-MM-DD_HH-MM` (e.g., `2026-03-24_14-30`).
 
-**`roundtable.md`** — Full record of the roundtable process. Written once at the end of Phase 2, not modified after. Contains:
-1. Agent team selected (names, personas, why each was chosen)
-2. Opening positions from Round 1
-3. Key debates from Round 2
-4. Disagreement Gate result
-5. Convergence output (consensus, disagreements, risk register)
-6. The structured execution plan table
+- **Output directory:** `{working_dir}/agent-loop-output/{run-id}/`
+- **State directory:** `{working_dir}/agent-loop-state/{run-id}/`
+- **Latest pointer:** `{working_dir}/agent-loop-state/latest.json` — contains `{"run_id": "2026-03-24_14-30"}` and is updated at the start of each new run.
 
-**`{agent-name}_deliverable.md`** — One file per agent in `agent-loop-output/`. Written when the agent completes their task.
+Old runs remain in their timestamped directories — no archive/move protocol needed. To find the most recent run, read `latest.json`.
 
-**`grading.md`** — Grading criteria and all scoring passes. **Append-only** — never overwrite a prior pass. Each new pass appends a new section. This preserves the audit trail.
+All state writes to `{working_dir}/agent-loop-state/{run-id}/`. On resume, the orchestrator has NO memory of the prior session — it reconstructs all context from state files.
 
-```
-## Criteria
-[The 8-15 criteria]
+### State Files
 
-## Pass 1
-[Full scorecard]
-Score: X/Y
-
-## Pass 2
-[Full scorecard]
-Score: X/Y
-```
-
-**`meta.json`** — Machine-readable metadata for resumption logic:
+- **`roundtable.md`** — Full roundtable record + execution plan + shared assumptions table. Written once at end of Phase 2.
+- **`{agent-name}_deliverable.md`** — In `agent-loop-output/{run-id}/`. One per agent.
+- **`grading.md`** — Append-only. All criteria and scorecards.
+- **`meta.json`** — Machine-readable metadata:
 
 ```json
 {
-  "created_at": "ISO-8601 timestamp",
-  "updated_at": "ISO-8601 timestamp",
+  "schema_version": "2.0.0",
+  "execution_mode": "first-run | balanced | express | repeat",
+  "created_at": "ISO-8601",
+  "updated_at": "ISO-8601",
   "phase": "scoping | roundtable | execution | grading",
-  "phase_status": "in_progress | completed",
-  "iteration": 0,
-  "resume_point": "Description of where to pick up",
-  "agents": ["strategy-consultant", "operator", "contrarian"],
+  "phase_status": "in_progress | completed | terminated_early",
   "tasks_completed": ["T1", "T2"],
-  "tasks_pending": ["T3", "T4"],
+  "tasks_in_progress": [],
+  "tasks_pending": ["T3"],
   "grading_pass": 0,
   "roundtable_returns": 0,
-  "user_problem_summary": "One-line summary of the original request"
+  "user_problem_summary": "One-line summary",
+  "user_directives": ["User said: remove legal section"],
+  "resume_point": "Description of where to pick up",
+  "file_hashes": {
+    "strategy-consultant_deliverable.md": {"word_count": 847, "first_line": "# Competitive Landscape Analysis"},
+    "operator_deliverable.md": {"word_count": 612, "first_line": "# Execution Roadmap"}
+  }
 }
 ```
 
-Updated at every meaningful state transition: phase change, task completion, grading pass completion. State is the orchestrator's responsibility — agents do not write to `meta.json`.
+Updated at every state transition. `meta.json` updates ONLY AFTER the deliverable write is confirmed — never optimistically.
+
+**File integrity hashes:** After writing each deliverable, record its word count and first line in the `file_hashes` object. On resume, validate each completed deliverable against its hash: read the file, compare word count and first line. If either mismatches (word count off by more than 5%, or first line differs), flag the file as potentially corrupted and offer to re-execute that task. This catches partial writes and silent truncation without overengineering.
 
 ### Resume Protocol
 
-On every skill invocation, before doing anything else, check for existing state:
+On every invocation, check for `{working_dir}/agent-loop-state/latest.json`. If found, read it to locate the most recent run. If the user invokes from a different directory or `latest.json` is not found, say: *"I looked for existing state in [path] and found nothing. Is there a previous run you want to resume? If so, provide the path."*
 
-**Active state (updated within 24 hours):**
+**If state is found:** Show the problem summary, progress, summaries of completed deliverables, and ask: resume or start fresh?
 
-```
-Found an in-progress agent loop from [timestamp].
-Problem: "[user_problem_summary]"
-Last completed: [phase + detail]
-Grading passes: [N of 4]
+**State integrity validation:** For every completed task, verify the deliverable file exists, exceeds 50 words, and matches its `file_hashes` entry in meta.json (word count within 5%, first line matches). For grading, verify the draft file exists. If validation fails, report specifically what is missing or corrupted and offer to re-execute only the affected tasks.
 
-Resume from [next logical step], or start fresh?
-```
+**On fresh start:** Simply create a new timestamped run directory. Previous runs remain untouched in their own directories.
 
-If resume: load minimum required state files (see table below), skip to the appropriate step, update `meta.json`.
-
-If start fresh: archive existing state to `agent-loop-state/archive/{timestamp}/`, move output files to the archive under an `output/` subfolder, initialize a new `meta.json`.
-
-**Stale state (updated more than 24 hours ago):** Same as above with a staleness warning.
-
-**No state found:** Start fresh. Create directories and initialize `meta.json`.
-
-### What Gets Loaded on Resume
-
-| Resume Point | What Gets Loaded |
-|-------------|-----------------|
-| Mid-Scoping | `meta.json` only. Re-present the agent team. |
-| Start of Roundtable | `meta.json` + agent list. Run roundtable from Round 1. |
-| Mid-Execution | `meta.json` + `roundtable.md` + completed deliverables that pending tasks depend on. |
-| Start of Grading | `meta.json` + `roundtable.md` + `draft_v1.md`. |
-| Mid-Grading | `meta.json` + `grading.md` + latest `draft_v{N}.md`. |
-
-Keep context lean. Do not load every deliverable file when resuming a grading pass — the compiled draft and scorecard are sufficient.
-
-### State Integrity Validation
-
-On every resume, before continuing:
-- For every task in `tasks_completed`: verify the deliverable file exists and contains more than 50 words.
-- For grading phase: verify `draft_v{N}.md` exists.
-- For roundtable phase: verify `roundtable.md` exists and contains the execution plan table.
-
-If validation fails:
-
-```
-STATE INTEGRITY CHECK FAILED
-================================================================
-meta.json reports: [phase, tasks_completed]
-But the following files are missing or incomplete:
-- [list]
-
-Options:
-1. RE-EXECUTE missing tasks only.
-2. START FRESH — Archive and begin from Phase 1.
-```
-
-The orchestrator NEVER silently ignores missing files. `meta.json` updates only AFTER the deliverable write is confirmed — never optimistically.
-
----
-
-## Failure Modes & Mitigations
-
-### Token Bloat
-
-A roundtable with 5-6 agents plus standing members can produce 15,000-25,000 tokens of orchestration overhead before a single deliverable word. If Phase 2 output exceeds 8,000 tokens, flag it. If cumulative orchestration overhead exceeds 40% of estimated available context, flag it.
-
-**Mitigations:** Enforce file-first output aggressively. In-context roundtable summary stays under 1,000 tokens, full record goes to `roundtable.md`. Cap opening positions at 300 words. After compiling the draft, do not keep individual deliverables in context — work from the draft file for grading. Express mode's abbreviated roundtable also functions as a token conservation measure.
-
-### Agent Similarity
-
-Two agents give functionally identical advice despite different persona labels.
-
-**Mitigations:** After Round 1, perform a redundancy check. If two agents' positions converge on the same diagnosis AND approach, either merge their scope and drop one, or push the more generic agent to differentiate. At selection time, ask: "If I removed this agent, would the roundtable lose a perspective no other agent covers?" Custom agents should be preferred over roster agents when the problem is specific enough.
-
-### Grading Loop Stall
-
-The same criterion keeps failing with no measurable improvement because the data doesn't exist or the scope was wrong. Addressed by the stall detection protocol in Phase 4.
-
-### State Corruption
-
-`meta.json` claims tasks are complete but deliverable files are missing or empty. Addressed by the state integrity validation protocol.
-
-### Dependency Deadlock
-
-Circular dependencies in the execution plan. Addressed by the mandatory dependency graph validation after Round 3.
-
-### Scope Creep During Execution
-
-An agent's deliverable balloons beyond its assigned scope, duplicating or contradicting other agents' work. Addressed by the scope constraint in subagent dispatch and the scope check at compilation.
+Be honest about context loss: *"Resuming from files — I have the deliverables and plan but not the full nuance of the original debate. Some context may be lost."*
 
 ---
 
 ## Integration with Other Skills
 
-The agent-loop is a meta-orchestration layer. It assembles teams, runs debates, and grades output — but it does not work in isolation. During execution, the orchestrator should check for installed skills and invoke them when they match the deliverable requirements.
-
-**Known complementary skills:**
-
-| Skill | When to Invoke |
-|-------|---------------|
-| `corsair-ic` | Deliverable requires Corsair IC deck formatting or structure |
-| `deal-assessment` | Problem involves PE deal diligence — sourcing, screening, or evaluation workflows |
-| `board-review` | Output is board materials or needs board-readiness review |
-| `deck-builder` | Deliverable is a presentation and a .pptx template is available |
-| `ic-deck-pipeline` | Full IC deck generation from analysis through formatted slides |
-| `deck-qa` | Any presentation output that needs quality review before delivery |
-
-**The principle:** This list is not exhaustive and will go stale. The orchestrator should treat installed skills as available tools, not a fixed menu. At the start of execution, check what skills are installed. If an installed skill matches a task in the execution plan — formatting, QA, domain workflow, voice/style — invoke it. Do not limit integration to the skills listed above.
-
-The agent-loop orchestrates; other skills execute the production.
-
----
-
-## Orchestrator Principles
-
-**Specificity over generality.** Every agent must argue from specific expertise, not generic advice. Every criterion must test something concrete. Every deliverable must include actual data, names, numbers, and citations — not just frameworks and assertions.
-
-**Debate is productive, not performative.** The roundtable should surface genuine disagreements that change the execution plan. If the agents are all nodding along, push them harder. Ask the contrarian to attack the consensus. Ask the operator what the strategy consultant is ignoring about execution reality. The Disagreement Gate enforces this.
-
-**The user is the decision-maker.** Present options and recommendations, but the user makes the calls at every checkpoint (team selection, roundtable output, grading criteria, final output). Don't steamroll past checkpoints. Execution modes reduce checkpoints — they don't eliminate user authority.
-
-**Grade honestly.** A criterion that fails should fail. Don't soft-pass something because you're on iteration 3 and want to be done. The whole point of the loop is rigor.
-
-**Preserve what works.** When revising in the grading loop, don't rewrite sections that already pass. Surgical fixes only. Every revision must trace to a specific failing criterion.
-
-**File-first, context-lean.** Deliverables, roundtable records, and grading logs go to files. The conversation carries summaries, scorecards, and user interactions. Context windows are not filing cabinets.
-
-**The plan is the contract.** The structured execution plan table produced in Phase 2 governs Phase 3. No additions, no omissions, no reinterpretation. If the plan needs to change, go back to the roundtable and amend the table.
-
-**Build the circuit breakers before the failure.** The Disagreement Gate, the escape hatch, the stall detection, the state validation — these exist because every system that runs more than ten times will hit failure modes. Handle them by design, not by surprise.
+At the start of Phase 3, use `Glob` to scan `~/.skills/skills/*/SKILL.md` and any project-level `.skills/` directories. Read the `name` and `description` from each. If an installed skill matches a task's requirements, invoke it. The agent-loop orchestrates; other skills execute production.
 
 ---
 
 ## Output Format
 
-### Standard Output Templates
+### Templates
 
-During Phase 1, the orchestrator recommends one of the four templates below based on the user's request. The user can accept, pick a different one, or request a hybrid. The template choice governs the compiled draft structure in Phase 3 and the format grading criteria in Phase 4.
+During Phase 1, recommend one of these based on the request. The user can accept, modify, or request a custom structure.
 
-### Template 1: Memo
+**Memo** — For analysis, research synthesis, strategic questions. Sections: Executive Summary, Context, Analysis, Recommendations, Risk Factors, Next Steps.
 
-**When to use:** Default for deal analysis, strategic questions, research synthesis, IC prep. Trigger phrases: "write me a memo," "analyze this deal," "what should we do about," "prepare an IC memo."
+**Deck Outline** — For presentations, pitch decks, board materials. Per-slide: key message, bullets, visual/data description, speaker note.
 
-```
-# [Title]
+**Decision Matrix** — For vendor selection, build-vs-buy, options evaluation. Sections: Options, Criteria with weights, Scoring Matrix, Recommendation, Risks.
 
-## Executive Summary
-- 3-5 sentences. The answer, not the setup.
+**Action Plan** — For operational planning, launches, project kickoffs. Sections: Objective, Constraints, Workstreams with task tables, Critical Path, Risk Register.
 
-## Context & Background
-- What prompted this analysis. Key facts.
+**Custom** — If none fit, design a structure specific to the deliverable. The templates are defaults, not mandates.
 
-## Analysis
-### [Section per major dimension from the roundtable]
-- Evidence, data, and sourced claims per thread.
+### Every Final Deliverable Includes
 
-## Recommendations
-- Numbered, specific, actionable. Each ties to a finding.
-
-## Risk Factors
-- Sourced from the Contrarian's roundtable contributions.
-
-## Next Steps
-- Who does what, by when.
-
-## Appendix (if applicable)
-```
-
-### Template 2: Deck Outline
-
-**When to use:** Default for presentations, board materials, investor updates. Trigger phrases: "build me a deck," "presentation on," "board update," "slide outline."
-
-```
-# [Deck Title]
-## Narrative Arc: [One sentence — the story the deck tells]
-
-### Slide 1: [Title]
-**Key Message:** [One takeaway]
-- Bullet 1
-- Bullet 2
-**Visual/Data:** [Chart or table description]
-**Speaker Note:** [What the presenter says, not on the slide]
-
-### Slide 2: [Title]
-...
-
-## Appendix Slides
-```
-
-### Template 3: Decision Matrix
-
-**When to use:** Default for vendor selection, build-vs-buy, options evaluation. Trigger phrases: "which should we choose," "compare these options," "build vs. buy."
-
-```
-# Decision: [What is being decided]
-
-## Options Under Evaluation
-## Evaluation Criteria (with weights)
-## Scoring Matrix (score + rationale per cell)
-## Recommendation
-## Key Risks of the Recommended Option
-## Decision Inputs Still Needed
-```
-
-### Template 4: Action Plan
-
-**When to use:** Default for operational planning, post-merger integration, project kickoffs. Trigger phrases: "build me a plan," "100-day plan," "integration plan," "how do we execute."
-
-```
-# Action Plan: [Title]
-
-## Objective
-## Constraints & Assumptions
-## Workstreams
-### Workstream 1: [Name]
-| # | Task | Owner | Due | Dependencies | Status |
-
-## Critical Path
-## Risk Register
-## Governance
-```
-
-If the user's request does not cleanly fit any template, propose a hybrid or custom structure. The templates are defaults, not mandates.
-
-### Regardless of Template
-
-Every final deliverable includes:
-
-1. **Roundtable Summary** — 1 paragraph on the approach and why it was chosen
-2. **The Deliverable** — The work product in the selected template
-3. **Grading Scorecard** — Final pass/fail on all criteria
-4. **Confidence Assessment** — Where the output is rock-solid vs. where uncertainty remains
-5. **Recommended Next Steps** — What the user should do with this output
+1. Roundtable summary (1 paragraph — approach and why)
+2. The deliverable in the selected template
+3. Grading scorecard (final pass)
+4. Confidence assessment (solid vs. uncertain areas)
+5. Recommended next steps
 
 ### File Conventions
 
-| File | Convention | Example |
-|------|-----------|---------|
-| Agent deliverables | `{agent-name}_deliverable.md` | `industry-expert_deliverable.md` |
-| Compiled drafts | `draft_v{N}.md` | `draft_v2.md` |
-| Final output | `final_{template_type}.md` | `final_memo.md`, `final_decision-matrix.md` |
-
----
-
-## When to Use Fewer Passes
-
-Not every problem needs 4 grading passes. Use judgment:
-
-- **Simple, well-defined tasks**: 1-2 passes may be enough
-- **Research/analysis**: Usually needs 2-3 passes
-- **High-stakes deliverables** (IC memos, investor letters, board materials): Use all 4 if needed
-- **Creative/strategic work**: The roundtable matters more than the grading loop — spend more time on Phase 2
+| File | Convention |
+|------|-----------|
+| Run output directory | `agent-loop-output/{run-id}/` |
+| Run state directory | `agent-loop-state/{run-id}/` |
+| Latest run pointer | `agent-loop-state/latest.json` |
+| Agent deliverables | `agent-loop-output/{run-id}/{agent-name}_deliverable.md` |
+| Compiled drafts | `agent-loop-output/{run-id}/draft_v{N}.md` |
+| Final output | `agent-loop-output/{run-id}/final_{template_type}.md` |
