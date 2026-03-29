@@ -237,6 +237,16 @@ After revising to address failing criteria, re-evaluate every previously passing
 
 If a previously passing criterion now fails due to a revision, that is a regression. Fix the regression before re-grading the originally failing criteria.
 
+## Context Overflow During Grading
+
+If context pressure exceeds 80% during the grading loop:
+1. Write the current scorecard and all pending revision notes to `agent-loop-state/grading.md`
+2. Summarize remaining criteria as "not yet graded — deferred due to context pressure"
+3. Switch any remaining grading passes to Express (single pass, no re-grade)
+4. Inform the user: *"Context pressure hit [X]% during grading. Wrote partial scores to grading.md. Remaining criteria graded in Express mode."*
+
+This prevents silent quality degradation when the grading loop runs long on complex deliverables.
+
 ---
 
 ## Criteria Evolution

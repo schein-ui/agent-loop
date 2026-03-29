@@ -73,28 +73,20 @@ The orchestrator assesses problem complexity and RECOMMENDS a mode. The user can
 If 0-1 are true: recommend **Express**. If exactly 1 is true AND it's the task/expert count (not risk): recommend **Balanced**. If 2+ are true: recommend **First-Run**. Default recommendation is **Balanced** unless the problem is clearly simple (Express) or clearly high-stakes/novel (First-Run). State the recommendation and reasoning; the user confirms or overrides.
 
 ### First-Run Mode
-
-All four checkpoints active: team approval, roundtable approval, grading criteria approval, final output review. Full three-round debate. Up to 4 grading passes. Use for high-stakes, novel, or multi-dimensional problems.
+4 checkpoints (team, roundtable, grading criteria, final). Full 3-round debate. Up to 4 grading passes. For high-stakes, novel, or multi-dimensional problems.
 
 ### Balanced Mode (DEFAULT)
-
-Two checkpoints: (1) Combined team + approach approval — the orchestrator presents the proposed team, roundtable summary, and execution plan in a single opt-out gate ("Here's the team and plan — any changes?"), (2) Final output review. Full three-round roundtable runs (not abbreviated). Full grading loop runs with auto-generated criteria (up to 4 passes). The difference from First-Run: team approval and roundtable approval are merged into one checkpoint, and grading criteria are auto-generated without a separate approval gate. This is the sweet spot for the ~60% of requests that are neither trivial nor high-stakes.
+2 checkpoints: (1) combined team + approach opt-out gate, (2) final review. Full roundtable and grading loop with auto-generated criteria. The ~60% sweet spot.
 
 ### Express Mode
-
-One checkpoint: final output review. Orchestrator picks agents and states the team. Abbreviated roundtable (opening positions only, no challenge round). Single grading pass with auto-generated criteria. Stall detection and the grading escape hatch are inactive in Express mode. Use for simple or urgent requests.
-
-**Express on a complex problem:** If Express is used despite 2+ complexity flags, the final output includes a disclaimer that key assumptions were not stress-tested.
+1 checkpoint: final review. Orchestrator picks agents. Opening positions only (no challenge round). Single grading pass. Stall detection and escape hatch inactive. For simple or urgent requests. If used despite 2+ complexity flags, output includes a disclaimer.
 
 ### Repeat Mode
-
-When the user explicitly says they have done this before ("same as last time," "repeat the analysis") OR archived state from a prior run exists in `agent-loop-state/archive/` and the problem type matches. Collapses team + roundtable into a single opt-out gate. Two interactions instead of four.
+For explicit repeats ("same as last time") or when archived state matches. Collapses team + roundtable into one opt-out gate. 2 interactions.
 
 ### Mid-Run Mode Switching
-
-If the user signals impatience at any checkpoint, the orchestrator may downgrade remaining phases to Express. State the downgrade explicitly: *"Switching to Express for remaining phases. This skips [what gets skipped]."*
-
-If the user says "stop," "good enough," or "just give me what you have": write all current output to files, update `meta.json` with `phase_status: terminated_early`, deliver best-available output with a disclaimer listing skipped phases.
+- **User impatient:** Downgrade remaining phases to Express. State what gets skipped.
+- **User says "stop" / "good enough":** Write all current output to files, update `meta.json` with `phase_status: terminated_early`, deliver best-available with disclaimer.
 
 ---
 
